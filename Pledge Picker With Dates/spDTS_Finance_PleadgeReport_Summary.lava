@@ -1,0 +1,38 @@
+{% assign AccountTotal = 0.00 %}
+<div class="panel panel-block">
+    <div class="panel-heading">
+        <h1 class="panel-title"><i class="fa fa-list"></i> Pledge Summary</h1>
+    </div>
+    <div class="panel-body">
+       <div class="accounts-default">
+            <div class="row">
+                <div class="col-md-8">
+                    <b>Account Name</b>
+                </div>
+                <div class="col-xs-4 text-right">
+                     <b>Total Given</b>
+                </div>
+            </div>
+            {% for row in rows %}
+            <div class="row">
+                <div class="col-md-8">
+                    {{ row.Account }}
+                </div>
+                <div class="col-xs-4 text-right" >
+                    {{ 'Global' | Attribute:'CurrencySymbol' }}{{ row.TotalGiven | Format:'#,##0.00' }}
+                </div>
+            </div>
+
+            {% assign AccountTotal = AccountTotal | Plus:row.TotalGiven %}
+            {% endfor %}
+            <div class="row">
+                <div class="col-xs-5 col-xs-offset-1">
+                    <strong>Total:</strong>
+                </div>
+                <div class="col-xs-6 text-right">
+                    <strong>{{ 'Global' | Attribute:'CurrencySymbol' }}{{ AccountTotal | Format:'#,##0.00' }}</strong>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
