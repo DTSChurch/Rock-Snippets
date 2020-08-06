@@ -1,0 +1,198 @@
+﻿{% assign mgKey = 'Global' | Attribute:'ManagedMailAPIKey' %}
+{% assign mgURL = 'Global' | Attribute:'ManagedMailURL' %}
+
+<!-- Page Menu -->
+<div class="col-xs-12">
+	<a href="{{Page.Id}}?Display=Hourly" class="btn btn-default {% if PageParameter.Display == "Hourly" %}active{% endif %}">Hourly</a>
+	<a href="{{Page.Id}}?Display=Daily" class="btn btn-default {% if PageParameter.Display == "Daily" %}active{% endif %}">Daily</a>
+	<a href="{{Page.Id}}?Display=Monthly" class="btn btn-default {% if PageParameter.Display == "Monthly" %}active{% endif %}">Monthly</a>
+</div>
+
+<!-- Looks at the URL to know which page to display -->
+{% if PageParameter.Display == 'Hourly' %}
+{% webrequest url:'https://api.mailgun.net/v3/{{mgURL}}/stats/total' basicauth:'api,{{mgKey}}' parameters:'event^accepted|event^delivered|event^failed|event^opened|event^clicked|event^complained|resolution^hour|duration^24h' requestcontenttype:'application/json' %}
+    <ul>
+    {% for item in results %}
+            {% capture jsonString %}
+                {{item.stats | ToJSON}}
+            {% endcapture %}
+
+    {% endfor %}
+    </ul>
+{% endwebrequest %}
+{{ 'https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js' | AddScriptLink }}
+<h3>Mailgun Hourly Report</h3>
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Sent</th>
+            <th>Delivered</th>
+            <th>Delivery %</th>
+            <th>Failed</th>
+            <th>Opened</th>
+            <th>Clicked</th>
+            <th>Complained</th>
+        </tr>
+    </thead>
+    <tbody>
+{% assign jsonObject = jsonString | FromJSON %}
+{% for mgData in jsonObject reversed %}
+        <tr>
+            
+          <th scope="row">
+          <script>
+            var date = moment.utc(Date.parse('{{ mgData.time}}'));
+            document.write(date.local().format("MMMM Do YYYY, h:mm:ss a [ET]"));
+            </script>
+            </th>
+          <td>{{ mgData.accepted.outgoing}}</td>
+          <td>{{ mgData.delivered.total}}</td>
+          <td>{% if mgData.delivered.total >0 %}{{ mgData.delivered.total | DividedBy:mgData.accepted.total | Format:'P0'}}{%else%}0{%endif%}</td>
+          <td>{{ mgData.failed.permanent.total}}</td>
+          <td>{{ mgData.opened.total}}</td>
+          <td>{{ mgData.clicked.total}}</td>
+          <td>{{ mgData.complained.total}}</td>
+        </tr>
+{% endfor %}
+    </tbody>
+</table>
+{%elseif PageParameter.Display == 'Monthly' %}
+{% webrequest url:'https://api.mailgun.net/v3/{{mgURL}}/stats/total' basicauth:'api,{{mgKey}}' parameters:'event^accepted|event^delivered|event^failed|event^opened|event^clicked|event^complained|resolution^month|duration^12m' requestcontenttype:'application/json' %}
+    <ul>
+    {% for item in results %}
+            {% capture jsonString %}
+                {{item.stats | ToJSON}}
+            {% endcapture %}
+
+    {% endfor %}
+    </ul>
+{% endwebrequest %}
+<h3>Mailgun Monthly Report</h3>
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Sent</th>
+            <th>Delivered</th>
+            <th>Delivery %</th>
+            <th>Failed</th>
+            <th>Opened</th>
+            <th>Clicked</th>
+            <th>Complained</th>
+        </tr>
+    </thead>
+    <tbody>
+{% assign jsonObject = jsonString | FromJSON %}
+{% for mgData in jsonObject reversed %}
+        <tr>
+          <th scope="row">{{ mgData.time | Slice: 8, 8}}</th>
+          <td>{{ mgData.accepted.outgoing}}</td>
+          <td>{{ mgData.delivered.total}}</td>
+          <td>{% if mgData.delivered.total >0 %}{{ mgData.delivered.total | DividedBy:mgData.accepted.total | Format:'P0'}}{%else%}0{%endif%}</td>
+          <td>{{ mgData.failed.permanent.total}}</td>
+          <td>{{ mgData.opened.total}}</td>
+          <td>{{ mgData.clicked.total}}</td>
+          <td>{{ mgData.complained.total}}</td>
+        </tr>
+{% endfor %}
+    </tbody>
+</table>
+{%elseif PageParameter.Display == 'Rejects' %}
+{%assign endTime = PageParameter.StartTime | Plus:86400 %}
+{% webrequest url:'https://api.mailgun.net/v3/{{mgURL}}/events?' basicauth:'api,{{mgKey}}' parameters:'event^failed|begin^{{PageParameter.StartTime}}|end^{{endTime}}|severity^permanent' requestcontenttype:'application/json' %}
+    <ul>
+    {% for data in results limit:1%}
+            {% capture jsonString %}
+                {{data.items | ToJSON}}
+            {% endcapture %}
+    {% endfor %}
+    </ul>
+{% endwebrequest %}
+<h3>Mailgun Failed Message Report for {{PageParameter.Date}}</h3>
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Sent To</th>
+            <th>Sent From</th>
+            <th>Subject</th>
+            <th>Status</th>
+            <th>reason</th>
+            <th>Attempt #</th>
+            <th>Code</th>
+            <th>Description</th>
+        </tr>
+    </thead>
+    <tbody>
+{% assign jsonObject = jsonString | FromJSON %}
+{% for mgData in jsonObject %}
+        <tr>
+          <th scope="row">{{ mgData.recipient}}</th>
+          <td>{{ mgData.envelope.sender}}</td>
+          <td>{{ mgData.message.headers.subject}}</td>
+          <td>{{ mgData.event}}</td>
+          <td>{{ mgData.reason}}</td>
+          <td>{{ mgData.delivery-status.attempt-no}}</td>
+          <td>{{ mgData.delivery-status.code}}</td>
+          <td>{{ mgData.delivery-status.message}}</td>
+        </tr>
+{% endfor %}
+    </tbody>
+</table>
+{%elseif PageParameter.Display == 'Complaints' %}
+Complaints
+{%else%}
+{% assign unixStartTime = '01/01/1970' | Date:'yyyy-MM-dd 00:00:00' %}
+{% webrequest url:'https://api.mailgun.net/v3/{{mgURL}}/stats/total' basicauth:'api,{{mgKey}}' parameters:'event^accepted|event^delivered|event^failed|event^opened|event^clicked|event^complained|resolution^day|duration^30d' requestcontenttype:'application/json' %}
+    <ul>
+    {% for item in results %}
+            {% capture jsonString %}
+                {{item.stats | ToJSON}}
+            {% endcapture %}
+
+    {% endfor %}
+    </ul>
+{% endwebrequest %}
+<h3>Mailgun Daily Report</h3>
+<table class="table table-bordered table-hover">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Sent</th>
+            <th>Delivered</th>
+            <th>Delivery %</th>
+            <th>Failed</th>
+            <th>Opened</th>
+            <th>Clicked</th>
+            <th>Complained</th>
+        </tr>
+    </thead>
+    <tbody>
+{% assign jsonObject = jsonString | FromJSON %}
+{% for mgData in jsonObject reversed %}
+{% assign mgUnixDay = mgData.time | Slice: 5,2 %}
+{% assign mgUnixMonth = mgData.time | Slice: 8,3 %}
+{% assign mgUnixYear = mgData.time | Slice: 12,4 %}
+{%if mgUnixMonth == 'Jan'%}{%assign mgMonth = 1%}{%elseif mgUnixMonth == 'Feb'%}{%assign mgMonth = 2%}
+{%elseif mgUnixMonth == 'Mar'%}{%assign mgMonth = 3%}{%elseif mgUnixMonth == 'Apr'%}{%assign mgMonth = 4%}
+{%elseif mgUnixMonth == 'May'%}{%assign mgMonth = 5%}{%elseif mgUnixMonth == 'Jun'%}{%assign mgMonth = 6%}
+{%elseif mgUnixMonth == 'Jul'%}{%assign mgMonth = 7%}{%elseif mgUnixMonth == 'Aug'%}{%assign mgMonth = 8%}
+{%elseif mgUnixMonth == 'Sep'%}{%assign mgMonth = 9%}{%elseif mgUnixMonth == 'Oct'%}{%assign mgMonth = 10%}
+{%elseif mgUnixMonth == 'Nov'%}{%assign mgMonth = 11%}{%elseif mgUnixMonth == 'Dec'%}{%assign mgMonth = 12%}
+{%endif%}
+{% assign newDate = mgMonth | Append:'/'| Append:mgUnixDay | Append:'/'| Append:mgUnixYear%}
+        <tr>
+          <th scope="row">{{ mgData.time | Slice: 0, 16}}</th>
+          <td>{{ mgData.accepted.outgoing}}</td>
+          <!--<td>{{ mgData.accepted.total}}</td>-->
+          <td>{{ mgData.delivered.total}}</td>
+          <td>{% if mgData.delivered.total >0 %}{{ mgData.delivered.total | DividedBy:mgData.accepted.total | Format:'P0'}}{%else%}0{%endif%}</td>
+          <td><a href="{{Page.Id}}?Display=Rejects&StartTime={{unixStartTime | DateDiff:newDate,'s'}}&Date={{newDate}}">{{ mgData.failed.permanent.total}}</a></td>
+          <td>{{ mgData.opened.total}}</td>
+          <td>{{ mgData.clicked.total}}</td>
+          <td>{{ mgData.complained.total}}</td>
+        </tr>
+{% endfor %}
+    </tbody>
+</table>
+{%endif%}
