@@ -1,0 +1,6 @@
+<ul class="nav nav-tabs">
+    <li><a href="~/page/{{PageParameter.PageId}}">ALL Campuses</a></li>
+{% for campus in Campuses %}
+    <li><a href="?CampusId={{campus.Id}}">{{campus.Name}}</a></li>
+{%endfor%}
+</ul>
