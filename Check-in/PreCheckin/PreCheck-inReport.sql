@@ -32,4 +32,4 @@ SELECT p.NickName
 	WHERE a.ForeignKey <> ''
 		AND Convert(Date,ao.OccurrenceDate)>= Convert(Date,GetDate()-6)
 		{% if PageParameter.CampusId %}AND a.CampusId = {{PageParameter.CampusId}}{%endif%}
-		ORDER BY s.Name,l.Name,a.CreatedDateTime
+		ORDER BY c.Name,g.Name,s.Name,a.CreatedDateTime
