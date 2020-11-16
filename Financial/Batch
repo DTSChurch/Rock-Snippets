@@ -1,0 +1,20 @@
+DECLARE @BatchTotals TABLE (Amount Decimal(18, 2), BatchDate DateTime, ForeignId INT)
+
+INSERT INTO @BatchTotals 
+SELECT SUM(T.Amount) AS Amount, T.BatchDateTime, T.BatchName
+FROM (
+	SELECT SUM(FTD.Amount) AS Amount, DATEADD(day, 1, EOMONTH(DATEADD(month, -1, (FT.TransactionDateTime) ) ) ) AS BatchDateTime,
+	CONVERT(VARCHAR, year(MIN(FT.TransactionDateTime))) + 
+	CONVERT(VARCHAR, month(MIN(FT.TransactionDateTime))) AS BatchName
+	FROM FinancialTransaction FT 
+	INNER JOIN FinancialTransactionDetail FTD ON FTD.TransactionId = FT.Id
+	--WHERE FT.TransactionDateTime >= '1/1/2020'
+	GROUP BY FT.TransactionDateTime
+	) AS T
+	GROUP BY T.BatchDateTime, T.BatchName
+	ORDER BY T.BatchDateTime ASC
+	
+--SELECT * FROM @BatchTotals
+INSERT INTO FinancialBatch (Name, BatchStartDateTime, Status, ControlAmount, Guid, ForeignId) 
+	SELECT CONVERT(VARCHAR, BatchDate, 110), BatchDate, 2, Amount, NEWID(), ForeignId
+	FROM @BatchTotals
