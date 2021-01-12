@@ -1,0 +1,7 @@
+{% for td in Row.TransactionDetails %}
+    {% financialaccount id:'{{td.AccountId}}' %}
+        {% for ft in financialaccountItems %}
+            {{ ft.Name }}
+        {% endfor %}
+    {% endfinancialaccount %}: {{td.Amount | FormatAsCurrency }}{% if forloop.last == false %},{% endif %}
+{% endfor %}
