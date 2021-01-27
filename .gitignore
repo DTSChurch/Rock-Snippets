@@ -1,5 +1,49 @@
-﻿################################################################################
-# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
-################################################################################
+#file types
+_ReSharper.*
+*.resharper
+*.DS_Store
+*.tlog
+*.vsp
+*.psess
+*.v11.suo
+*.user
+*.suo
+#*.Framework.XML
 
-/.vs/slnx.sqlite
+#specific files
+web.[Cc]onnectionStrings.config
+app.[Cc]onnectionStrings.config
+desktop.ini
+Rock.XML
+Quartz.xml
+StyleCop.Cache
+
+#build artifacts
+**/[Bb]in/[Dd]ebug
+**/[Bb]in/[Rr]elease
+**/[Oo]bj/[Dd]ebug
+**/[Oo]bj/[Rr]elease
+
+#specific folders
+RockWeb/Cache/*
+RockWeb/Content/ASM_Thumbnails
+RockWeb/App_Data/PackageStaging
+RockWeb/App_Data/MobileAppBundles
+/scaffolding.config
+*.sln.GhostDoc.xml
+.vs/
+.vshistory/
+.localhistory/
+.vshistory/
+TestResults/
+
+Packages/*
+
+# javascript deps
+node_modules
+.cache
+*.map
+/packages/
+/Installers/CheckScannerInstall/UpgradeLog.htm
+/Installers/CheckScannerInstall/UpgradeLog2.htm
+/Installers/CheckScannerInstall_2017/CheckScannerInstall
