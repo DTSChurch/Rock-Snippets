@@ -1,0 +1,199 @@
+{% stylesheet %}
+@media print{
+       .noprint{
+            display:none !important;   
+       }
+}
+{% endstylesheet %}
+
+{% assign weeksBack = PageParameter:'WeeksBack' %}
+{% assign dateRange = PageParameter:'DateRange' %}
+
+{% if weeksBack and dateRange %}
+    <div class="alert alert-warning padding-all-md">
+        Please select either Week's back or a Date Range
+    </div>
+{% elseif weeksBack %}
+
+    {% assign weeksBackNumber = weeksBack | Split:'|' %}
+    {% assign weeksBackFormatted = weeksBackNumber[1] %}
+    {% assign thisSundayDate = 'Now' | SundayDate %}
+    {% assign pastWeeks = '' %}
+    {% for i in (1..weeksBackFormatted) %}
+        {% assign dateBack = i | Times:-7 %}
+        {% assign getWeek = thisSundayDate | DateAdd:{{dateBack}},'d' | SundayDate %}
+        {% capture pastWeeks %}{{pastWeeks}}{% if forloop.first %}{% else %},{% endif %}{{getWeek}}{% endcapture %}
+    {% endfor %}
+    {% assign pastWeeksArray = pastWeeks | Split:',' %}
+
+{% elseif dateRange %}
+
+    {% assign dates = dateRange | Split:',' %}
+    {% assign weeksApart = dates[0] | DateDiff:dates[1],'d' | DividedBy:7,0 %}
+    {% assign weeksBackFormatted = weeksApart %}
+    {% assign pastWeeks = '' %}
+    {% for i in (1..weeksBackFormatted) %}
+        {% assign dateBack = i | Times:-7 %}
+        {% assign getWeek = dates[1] | DateAdd:{{dateBack}},'d' | SundayDate %}
+        {% capture pastWeeks %}{{pastWeeks}}{% if forloop.first %}{% else %},{% endif %}{{getWeek}}{% endcapture %}
+    {% endfor %}
+    {% assign pastWeeksArray = pastWeeks | Split:',' %}
+    {% else %}
+    <div class="alert alert-info padding-all-md">
+        Please select one date filter
+    </div>
+{% endif %}
+
+{% if pastWeeksArray %}
+<div class="pull-right noprint">
+    <a href="#" onclick="window.print();" class="btn btn-primary"><i class="fa fa-print"></i> Print</a>
+</div>
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Group Name</th>
+                {% for week in pastWeeksArray %}
+                    <th>{{week}}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            <tr><!-- AM On Campus 1 - 41 (Thursday) -->
+                <td>
+                    AM On Campus 1 - 41 (Thursday)
+                </td>
+                {% for week in pastWeeksArray %}
+                    <td>
+                        {% assign onCampusTotal = 0 %}
+                        {% group id:'103143' %}
+                            {% for group in groupItems %}
+                                {% for g in group.Groups %}
+                                    {% attendanceoccurrence where:'GroupId == {{ g.Id }} && SundayDate == "{{week}}"' %}
+                                        {% for ao in attendanceoccurrenceItems %}
+                                            {% attendance where:'OccurrenceId == {{ ao.Id }} && DidAttend == true' count:'true' %}
+                                                {% assign onCampusTotal = onCampusTotal | Plus:count %}
+                                            {% endattendance %}
+                                        {% endfor %}
+                                    {% endattendanceoccurrence %}
+                                {% endfor %}
+                            {% endfor %}
+                        {% endgroup %}
+                        {{onCampusTotal}}
+                    </td>
+                {% endfor %}
+            </tr>
+            <tr><!-- AM - HG - Gatewood (Thursday) -->
+                <td>
+                    AM - HG - Gatewood (Thursday)
+                </td>
+                {% for week in pastWeeksArray %}
+                    <td>
+                        {% assign amGatewoodTotal = 0 %}
+                        {% group id:'103139' %}
+                            {% for g in groupItems %}
+                                {% attendanceoccurrence where:'GroupId == {{ g.Id }} && SundayDate == "{{week}}"' %}
+                                    {% for ao in attendanceoccurrenceItems %}
+                                        {% attendance where:'OccurrenceId == {{ ao.Id }} && DidAttend == true' count:'true' %}
+                                            {% assign amGatewoodTotal = amGatewoodTotal | Plus:count %}
+                                        {% endattendance %}
+                                    {% endfor %}
+                                {% endattendanceoccurrence %}
+                            {% endfor %}
+                        {% endgroup %}
+                        {{ amGatewoodTotal }}
+                    </td>
+                {% endfor %}
+            </tr>
+            <tr><!-- AM - HG - Carmichael (Tuesday) -->
+                <td>
+                    AM - HG - Carmichael (Tuesday)
+                </td>
+                {% for week in pastWeeksArray %}
+                    <td>
+                        {% assign amCarmichaelTotal = 0 %}
+                        {% group id:'103309' %}
+                            {% for g in groupItems %}
+                                {% attendanceoccurrence where:'GroupId == {{ g.Id }} && SundayDate == "{{week}}"' %}
+                                    {% for ao in attendanceoccurrenceItems %}
+                                        {% attendance where:'OccurrenceId == {{ ao.Id }} && DidAttend == true' count:'true' %}
+                                            {% assign amCarmichaelTotal = amCarmichaelTotal | Plus:count %}
+                                        {% endattendance %}
+                                    {% endfor %}
+                                {% endattendanceoccurrence %}
+                            {% endfor %}
+                        {% endgroup %}
+                        {{ amCarmichaelTotal }}
+                    </td>
+                {% endfor %}
+            </tr>
+            <tr><!-- AM - HG - Foster (Tuesday) -->
+                <td>
+                    AM - HG - Foster (Tuesday)
+                </td>
+                {% for week in pastWeeksArray %}
+                    <td>
+                        {% assign amFosterTotal = 0 %}
+                        {% group id:'103809' %}
+                            {% for g in groupItems %}
+                                {% attendanceoccurrence where:'GroupId == {{ g.Id }} && SundayDate == "{{week}}"' %}
+                                    {% for ao in attendanceoccurrenceItems %}
+                                        {% attendance where:'OccurrenceId == {{ ao.Id }} && DidAttend == true' count:'true' %}
+                                            {% assign amFosterTotal = amFosterTotal | Plus:count %}
+                                        {% endattendance %}
+                                    {% endfor %}
+                                {% endattendanceoccurrence %}
+                            {% endfor %}
+                        {% endgroup %}
+                        {{ amFosterTotal }}
+                    </td>
+                {% endfor %}
+            </tr>
+            <tr><!-- PM - HG - Bailey (Thursday) -->
+                <td>
+                    PM - HG - Bailey (Thursday)
+                </td>
+                {% for week in pastWeeksArray %}
+                    <td>
+                        {% assign pmBaileyTotal = 0 %}
+                        {% group id:'103310' %}
+                            {% for g in groupItems %}
+                                {% attendanceoccurrence where:'GroupId == {{ g.Id }} && SundayDate == "{{week}}"' %}
+                                    {% for ao in attendanceoccurrenceItems %}
+                                        {% attendance where:'OccurrenceId == {{ ao.Id }} && DidAttend == true' count:'true' %}
+                                            {% assign pmBaileyTotal = pmBaileyTotal | Plus:count %}
+                                        {% endattendance %}
+                                    {% endfor %}
+                                {% endattendanceoccurrence %}
+                            {% endfor %}
+                        {% endgroup %}
+                        {{ pmBaileyTotal }}
+                    </td>
+                {% endfor %}
+            </tr>
+            <tr><!-- PM - HG - Patton (Thursday) -->
+                <td>
+                    PM - HG - Patton (Thursday)
+                </td>
+                {% for week in pastWeeksArray %}
+                    <td>
+                        {% assign pmPattonTotal = 0 %}
+                            {% group id:'103141' %}
+                                {% for g in groupItems %}
+                                    {% attendanceoccurrence where:'GroupId == {{ g.Id }} && SundayDate == "{{week}}"' %}
+                                        {% for ao in attendanceoccurrenceItems %}
+                                            {% attendance where:'OccurrenceId == {{ ao.Id }} && DidAttend == true' count:'true' %}
+                                                {% assign pmPattonTotal = pmPattonTotal | Plus:count %}
+                                            {% endattendance %}
+                                        {% endfor %}
+                                    {% endattendanceoccurrence %}
+                                {% endfor %}
+                            {% endgroup %}
+                            {{ pmPattonTotal }}
+                    </td>
+                {% endfor %}
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}
