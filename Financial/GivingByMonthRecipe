@@ -105,3 +105,380 @@ Set @sqlcmd = N'CREATE TABLE #tempSummary
 + ' from #tempSummary '+ ' order by Amount desc'
 exec sp_sqlexec @sqlcmd
 end
+
+
+
+
+
+/****** Object:  StoredProcedure [dbo].[sps_Grace_12MonthsGivingSummary]    Script Date: 2/1/2021 4:40:06 PM ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+ALTER PROC [dbo].[sps_Grace_12MonthsGivingSummaryDV] (@StartDate DateTime, @MinAmt as nvarchar(50), @MaxAmt as nvarchar(50), @CampusGUID as nvarchar(36), @DataViewId nvarchar(16))
+as
+
+DECLARE @Today DATETIME
+SET @Today = isnull(@StartDate, GetDate())
+
+DECLARE @MinValue int = null
+DECLARE @MaxValue int = null
+DECLARE @DataViewValue int = null
+
+
+Declare @OneYearAgo DATETIME
+SET @OneYearAgo = Dateadd(Year, -1, @Today)
+IF @MinAmt <> 'null' BEGIN SET @MinValue = CAST(@MinAmt as int) END
+IF @MaxAmt <> 'null' BEGIN SET @MaxValue = CAST(@MaxAmt as int) END
+If @DataViewId <> 'null' BEGIN SET @DataViewValue = CAST(@DataViewId as int) END
+IF @CampusGuid = 'null' BEGIN SET @CampusGUID = null END
+
+SELECT 
+Givers.PersonId,
+-- By default this is commented out, uncomment to see Person's email
+-- Person.Email,
+c.Name as Campus,
+case when Person.RecordTypeValueId = 1 then Person.NickName + ' ' + Person.LastName else Person.LastName end as [Person/Business],
+GiversPrev.Amount AmountPrev,
+Givers.Amount Amount,
+COALESCE(Month1.Gave,0) + COALESCE(Month2.Gave,0) + COALESCE(Month3.Gave,0) + COALESCE(Month4.Gave,0) + COALESCE(Month5.Gave,0) + COALESCE(Month6.Gave,0) + COALESCE(Month7.Gave,0) + COALESCE(Month8.Gave,0) + COALESCE(Month9.Gave,0) + COALESCE(Month10.Gave,0) + COALESCE(Month11.Gave,0) + COALESCE(Month12.Gave,0) [MonthsGiven],
+Month1.Amount [Month1],
+Month2.Amount [Month2],
+Month3.Amount [Month3],
+Month4.Amount [Month4],
+Month5.Amount [Month5],
+Month6.Amount [Month6],
+Month7.Amount [Month7],
+Month8.Amount [Month8],
+Month9.Amount [Month9],
+Month10.Amount [Month10],
+Month11.Amount [Month11],
+Month12.Amount [Month12]
+FROM (
+  SELECT
+    pa.PersonId,
+    Sum(td.Amount) [Amount]
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-13))
+	AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-1))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Givers]
+JOIN Person on Person.Id = Givers.PersonId
+
+join [group] family on person.PrimaryFamilyId = family.id
+left join campus c on family.CampusId = c.Id
+
+left join
+(
+  SELECT
+    pa.PersonId,
+    Sum(td.Amount) [Amount]
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@OneYearAgo,-13))
+	AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@OneYearAgo,-1))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [GiversPrev] on Givers.PersonId = GiversPrev.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+	sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-2))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-1))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month1] ON Month1.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-3))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-2))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month2] ON Month2.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-4))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-3))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month3] ON Month3.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-5))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-4))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month4] ON Month4.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-6))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-5))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month5] ON Month5.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-7))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-6))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month6] ON Month6.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-8))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-7))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month7] ON Month7.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-9))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-8))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month8] ON Month8.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+	sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-10))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-9))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month9] ON Month9.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-11))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-10))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month10] ON Month10.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-12))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-11))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month11] ON Month11.PersonId = Givers.PersonId
+
+LEFT JOIN (
+  SELECT
+    1 [Gave],
+    sum(td.Amount) as [Amount],
+    PersonId
+  FROM FinancialTransaction [t]
+  INNER JOIN FinancialTransactionDetail [td] ON td.TransactionId = t.Id AND td.Amount IS NOT NULL
+  INNER JOIN FinancialAccount [fa] ON td.AccountId = fa.Id AND IsTaxDeductible = 1
+  INNER JOIN PersonAlias [pa]
+    ON t.AuthorizedPersonAliasId = pa.Id
+  WHERE t.TransactionDateTime >= DATEADD(DAY, 1, EOMONTH(@today,-13))
+    AND t.TransactionDateTime < DATEADD(DAY, 1, EOMONTH(@today,-12))
+    AND t.TransactionTypeValueId != 54
+	AND (
+			(IsNumeric(@DataViewValue) = 1 AND pa.PersonId IN (Select dvp.EntityId from DataViewPersistedValue dvp where dvp.DataViewId = @DataViewValue))
+		OR
+			(IsNumeric(@DataViewValue) = 0 AND pa.PersonId IS NOT NULL)
+		)
+    --AND pa.PersonId IN (SELECT[PersonId] FROM[GroupMember] gm INNER JOIN[Group] g ON g.[Id] = gm.[GroupId] WHERE g.[Id] = '408577' AND gm.[GroupMemberStatus] = 1)
+  GROUP BY
+    pa.PersonId
+) [Month12] ON Month12.PersonId = Givers.PersonId
+where Givers.Amount >= isnull(@MinValue, Givers.Amount)  and Givers.Amount <= isnull(@MaxValue, Givers.Amount)
+    and isnull(cast(c.Guid as nvarchar(36)), '000000000000000000000000000000000000') = cast(isnull(@CampusGUID, isnull(cast(c.Guid as nvarchar(36)), '000000000000000000000000000000000000')) as nvarchar(36))
+	--and person.NickName = 'Joseph' and person.LastName = 'McLaughlin'
+Order by Givers.Amount desc
