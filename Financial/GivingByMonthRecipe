@@ -1,0 +1,87 @@
+{% if PageParameter.AsOfDate %}
+DECLARE @asofdate date = '{{'Global' | PageParameter:'AsOfDate'}}'
+{%else%}
+DECLARE @asofdate date = '1/1/1900'
+{%endif%}
+
+if @asofdate != '1/1/1900'
+begin
+
+Declare @minamt money = null
+Declare @maxamt money = null
+Declare @campusguid nvarchar(36) = null
+{% assign minamt = 'Global' | PageParameter:'MinAmount' %}
+{% assign maxamt = 'Global' | PageParameter:'MaxAmount' %}
+{% assign campusguid = 'Global' | PageParameter:'Campus' %}
+{% if minamt > 0 %}
+Set @minamt = {{ minamt }}
+{% endif %}
+{% if maxamt > 0 %}
+set @maxamt = {{ maxamt }}
+{% endif %}
+{% if campusguid > '' %}
+set @campusguid = '{{ campusguid }}'
+{% endif %}
+DECLARE @Today DATETIME
+Declare @MonthsBack Datetime
+if @asofdate = '1/1/1900'
+begin
+SET @Today = GetDate()
+end
+else
+begin
+SET @Today = @asofdate
+end
+if OBJECT_ID('tempdb..#tempSummary') is not null
+drop table #tempSummary
+set @MonthsBack = dateadd(month, -1, @Today)
+Declare @Month1 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -2, @Today)
+Declare @Month2 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -3, @Today)
+Declare @Month3 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -4, @Today)
+Declare @Month4 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -5, @Today)
+Declare @Month5 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -6, @Today)
+Declare @Month6 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -7, @Today)
+Declare @Month7 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -8, @Today)
+Declare @Month8 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -9, @Today)
+Declare @Month9 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -10, @Today)
+Declare @Month10 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -11, @Today)
+Declare @Month11 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+set @MonthsBack = dateadd(month, -12, @Today)
+Declare @Month12 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
+declare @sqlcmd nvarchar(4000)
+Set @sqlcmd = N'CREATE TABLE #tempSummary
+(PersonId int, Campus nvarchar(50), [Person/Business] nvarchar(max), AmountPrev money, Amount money, MonthsGiven int, Month1 money, Month2 money, Month3 money, Month4 money, Month5 money, Month6 money, Month7 money, Month8 money, Month9 money, Month10 money, Month11 money, Month12 money)'
++ ' declare @StartDate DateTime = ''' + convert(nvarchar, @Today, 101) + ''' '
++ ' declare @minamt money = ' + case when @minamt is null then 'null' else cast(@minamt as nvarchar) end
++ ' declare @maxamt money = ' + case when @maxamt is null then 'null' else cast(@maxamt as nvarchar) end
++ ' declare @campusguid nvarchar(36) = ' + case when @campusguid is null then 'null' else '''' + @campusguid + '''' end
++ ' INSERT INTO #tempSummary exec sps_Grace_12MonthsGivingSummary @StartDate, @minamt, @maxamt, @campusguid'
++ ' select PersonId, [Person/Business], Campus, '
++ ' Format(AmountPrev, ''C'', ''EN-US'') as Previous12MonthsTotal, '
++ ' Format(Amount, ''C'', ''EN-US'') as Last12MonthsTotal, '
++ ' MonthsGiven, '
++ ' Format(Month1, ''C'', ''EN-US'') as ' + @Month1 + ', '
++ ' Format(Month2, ''C'', ''EN-US'') as ' + @Month2 + ', '
++ ' Format(Month3, ''C'', ''EN-US'') as ' + @Month3 + ', '
++ ' Format(Month4, ''C'', ''EN-US'') as ' + @Month4 + ', '
++ ' Format(Month5, ''C'', ''EN-US'') as ' + @Month5 + ', '
++ ' Format(Month6, ''C'', ''EN-US'') as ' + @Month6 + ', '
++ ' Format(Month7, ''C'', ''EN-US'') as ' + @Month7 + ', '
++ ' Format(Month8, ''C'', ''EN-US'') as ' + @Month8 + ', '
++ ' Format(Month9, ''C'', ''EN-US'') as ' + @Month9 + ', '
++ ' Format(Month10, ''C'', ''EN-US'') as ' + @Month10 + ', '
++ ' Format(Month11, ''C'', ''EN-US'') as ' + @Month11 + ', '
++ ' Format(Month12, ''C'', ''EN-US'') as ' + @Month12
++ ' from #tempSummary '+ ' order by Amount desc'
+exec sp_sqlexec @sqlcmd
+end
