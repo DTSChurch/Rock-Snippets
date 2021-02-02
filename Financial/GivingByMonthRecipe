@@ -1,27 +1,46 @@
+{% if PageParameter.Dataview %}
+    {% dataview where:'Guid == "{{PageParameter:'Dataview'}}"' %}
+        {% for dv in dataviewItems %}
+            {% assign dataViewId = dv.Id %}
+        {% endfor %}
+    {% enddataview %}
+{% endif %}
+{% if dataViewId > 0 %}
+DECLARE @dataviewid nvarchar(16) = '{{dataViewId}}'
+{% else %}
+DECLARE @dataviewid nvarchar(16) = 'null'
+{% endif %}
+
 {% if PageParameter.AsOfDate %}
-DECLARE @asofdate date = '{{'Global' | PageParameter:'AsOfDate'}}'
+DECLARE @asofdate date = '{{PageParameter:'AsOfDate'}}'
 {%else%}
 DECLARE @asofdate date = '1/1/1900'
 {%endif%}
-
 if @asofdate != '1/1/1900'
+
 begin
 
-Declare @minamt money = null
-Declare @maxamt money = null
-Declare @campusguid nvarchar(36) = null
-{% assign minamt = 'Global' | PageParameter:'MinAmount' %}
-{% assign maxamt = 'Global' | PageParameter:'MaxAmount' %}
-{% assign campusguid = 'Global' | PageParameter:'Campus' %}
+{% assign minamt = PageParameter:'Minimum12MonthTotal' %}
 {% if minamt > 0 %}
-Set @minamt = {{ minamt }}
+Declare @maxamt nvarchar(50) = '{{minamt}}'
+{% else %}
+Declare @minamt nvarchar(50) = 'null'
 {% endif %}
+
+{% assign maxamt = PageParameter:'Maximum12MonthTotal' %}
 {% if maxamt > 0 %}
-set @maxamt = {{ maxamt }}
+Declare @maxamt nvarchar(50) = '{{maxamt}}'
+{% else %}
+Declare @maxamt nvarchar(50) = 'null'
 {% endif %}
+
+{% assign campusguid = PageParameter:'Campus' %}
 {% if campusguid > '' %}
-set @campusguid = '{{ campusguid }}'
+DECLARE @campusguid nvarchar(36) = '{{campusguid}}'
+{% else %}
+DECLARE @campusguid nvarchar(36) = 'null'
 {% endif %}
+
 DECLARE @Today DATETIME
 Declare @MonthsBack Datetime
 if @asofdate = '1/1/1900'
@@ -58,15 +77,16 @@ set @MonthsBack = dateadd(month, -11, @Today)
 Declare @Month11 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
 set @MonthsBack = dateadd(month, -12, @Today)
 Declare @Month12 nvarchar(20) = '[' + (select left(convert(nvarchar, @MonthsBack, 107), 3) + ' ' + right(convert(nvarchar, @MonthsBack, 107), 4)) + ']'
-declare @sqlcmd nvarchar(4000)
+declare @sqlcmd nvarchar(max)
 Set @sqlcmd = N'CREATE TABLE #tempSummary
 (PersonId int, Campus nvarchar(50), [Person/Business] nvarchar(max), AmountPrev money, Amount money, MonthsGiven int, Month1 money, Month2 money, Month3 money, Month4 money, Month5 money, Month6 money, Month7 money, Month8 money, Month9 money, Month10 money, Month11 money, Month12 money)'
 + ' declare @StartDate DateTime = ''' + convert(nvarchar, @Today, 101) + ''' '
-+ ' declare @minamt money = ' + case when @minamt is null then 'null' else cast(@minamt as nvarchar) end
-+ ' declare @maxamt money = ' + case when @maxamt is null then 'null' else cast(@maxamt as nvarchar) end
-+ ' declare @campusguid nvarchar(36) = ' + case when @campusguid is null then 'null' else '''' + @campusguid + '''' end
-+ ' INSERT INTO #tempSummary exec sps_Grace_12MonthsGivingSummary @StartDate, @minamt, @maxamt, @campusguid'
-+ ' select PersonId, [Person/Business], Campus, '
++ ' declare @minamt nvarchar(50) = ' + '''' + @minamt + ''''
++ ' declare @maxamt nvarchar(50) = ' + '''' + @maxamt + ''''
++ ' declare @campusguid nvarchar(36) = ' + '''' + @campusguid + ''''
++ ' declare @dataviewid nvarchar(16) = ' + '''' +  @dataviewid + ''''
++ ' INSERT INTO #tempSummary exec sps_Grace_12MonthsGivingSummaryDV @StartDate, @minamt, @maxamt, @campusguid, @dataviewid'
++ ' select [PersonId], [Person/Business], [Campus], '
 + ' Format(AmountPrev, ''C'', ''EN-US'') as Previous12MonthsTotal, '
 + ' Format(Amount, ''C'', ''EN-US'') as Last12MonthsTotal, '
 + ' MonthsGiven, '
