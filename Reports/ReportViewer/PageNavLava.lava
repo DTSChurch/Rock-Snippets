@@ -1,0 +1,54 @@
+{% stylesheet %}
+#reportPages .card {
+    margin-bottom: 15px;
+    border: none;
+    box-shadow: #00000014 0px 6px 13px;
+}
+#reportPages .card-title{
+    font-weight:700;
+    margin: 5px 0px;
+}
+#reportPages .card-text{
+    color: #7b7b7b;
+}
+#reportPages .card-body{
+    padding: 10px 15px;
+}
+#reportPages .list-group{
+    max-width: 900px;
+}
+{% endstylesheet %}
+{% if Page.DisplayChildPages == 'true' and Page.Pages != empty %}
+<div id="reportPages" class="row">
+    <div class="col-xs-12 col-md-4 col-lg-3">
+        <label style="color: #a7a7a7;">CATEGORIES</label>
+        <div class="list-group">
+            {% for childPage in Page.Pages %}
+                <a class="{% if childPage.Current == 'true' %}active {% endif %}list-group-item" href="{{ childPage.Url }}">{{ childPage.Title }}</a>
+                {% if childPage.Current == 'true' %}
+                    {% capture pageId %}{{childPage.Id}}{% endcapture %}
+                    {{ CurrentPerson | SetUserPreference:'block-id-1275-last-category', pageId  }}
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    <div class="col-xs-12 col-md-8 col-lg-push-1 col-lg-8">
+        <label style="color: #a7a7a7;">REPORTS</label>
+            <div class="list-group">
+            {% for childPage in Page.Pages %}
+                {% for grandChildPage in childPage.Pages %}
+                    {% if childPage.Current == 'true' %}
+                        <div class="card">
+                            <div class="card-body">
+                                <h4 class="card-title">{{ grandChildPage.Title }}</h4>
+                                <p class="card-text">{{ grandChildPage.Description }}</p>
+                                <a href="{{ grandChildPage.Url }}" class="btn btn-xs btn-info">Run Report</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
