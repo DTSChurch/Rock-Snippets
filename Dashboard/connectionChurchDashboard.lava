@@ -1,0 +1,450 @@
+{% stylesheet %}
+.calendar{
+    background: #fff;
+}
+body{
+    background: #f1f1f1 !important;
+}
+.btn-dash{
+    background: #fff;
+    border-radius: 5px;
+    box-shadow: 0px 4px 7px #0000000d;
+    color: #000;
+    margin-bottom: 10px;
+    margin-right:10px;
+    transition: .2s ease-in-out;
+    -webkit-transition: .2s ease-in-out;
+}
+.btn-dash:hover,
+.btn-dash:focus{
+    box-shadow: 0px 6px 10px #00000026;
+}
+.dash-alert-info{
+    background: #eefaff;
+    color: #4f8aa2;
+}
+.dash-panel{
+    padding: 15px;
+    margin-bottom: 25px;
+    box-shadow: 0px 6px 10px #0000000d;
+    border-radius: 5px;
+}
+.dash-default{
+    background: #fff;
+}
+.dash-card{
+    margin-bottom: 15px;
+}
+.dash-card-body{
+
+    position: relative;
+    background: #fff;
+    padding: 10px 30px;
+    height: 100%;
+    border-radius: 5px;
+}
+.dash-card h5{
+    margin-bottom: 8px;
+    text-align:center;
+}
+.dash-ytd h5{
+    color: #27608a;
+}
+.dash-weekly h5{
+    color: #9c8942;
+}
+.dash-panel-title{
+    text-transform: uppercase;
+    color: #000;
+    font-weight: 800;
+}
+.dts-dash i{
+    padding: 10px;
+    font-size: 15px;
+    font-size: 15px;
+    color: #599dd4;
+    background: #e1ebf3;
+    border-radius: 4px;
+    vertical-align: middle;
+    float: none;
+    margin-left: 10px;
+    margin-top: -5px;
+}
+.dash-ytd i{
+    color: #599dd4;
+    background: #e1ebf3;
+}
+.dash-weekly i{
+    color: #9c8942;
+    background: #efebdf;
+}
+.dash-stat{
+    text-align: center;
+    display: block;
+    vertical-align: middle;
+    float: none;
+    font-size: 35px;
+    font-weight: 800;
+    object-position: center;
+}
+@media (min-width:1800px){
+    .dash-card{
+        width: 20%;
+    }
+}
+{% endstylesheet %}
+<div class="row">
+    <div class="col-xs-12">
+        <div class="dash-panel dash-alert-info">
+            <h5>Hey {{ Person.NickName }}!</h5>
+    		<p>We want you to know how thankful we are for all that you do! Below are some helpful links for you as you navigate through Rock. If you have any questions on how things are setup, or where to find what, please let Jon know.</p>
+        </div>
+    	<div class="row">
+    	  <div class="col-xs-12">
+    	      <div>
+          	      <a href="/NewFamily" class="btn btn-dash"><i class="fa fa-user-plus"></i> New Family</a>
+        	      <a href="/page/19" class="btn btn-dash"><i class="fa fa-file"></i> Rock Tutorials</a>
+        	      <a href="/page/662" class="btn btn-dash"><i class="fa fa-clock"></i> Vacation Request</a>
+    	      </div>
+      	      <div>
+          	      <a href="/page/407" class="btn btn-dash"><i class="fa fa-handshake-o"></i> Connections</a>
+        	      <a href="/page/20" class="btn btn-dash"><i class="fa fa-link"></i> Important Links</a>
+        	      <a href="/PO-Request" class="btn btn-dash" class="btn btn-primary"><i class="fa fa-file"></i> PO Request</a>
+    	      </div>
+      	      <div>
+          	      <a href="/page/113?GroupId=20807" class="btn btn-dash"><i class="fa fa-users"></i> Groups</a>
+        	      <a href="/page/145" class="btn btn-dash"><i class="fa fa-list-alt"></i> Data Views</a>
+        	      <a href="/creativerequest" class="btn btn-dash"><i class="fas fa-pencil-ruler"></i> Creative Request</a>
+    	      </div>
+          </div>
+	    </div>
+	</div>
+</div>
+
+{% assign weekAgo = 'Now' | DateAdd:-7 | Date:'M/d/yyyy' %}
+{%- assign nowYear = 'Now' | Date:'yyyy' -%}
+{%- capture beginningDate -%}
+1/1/{{-nowYear-}}
+{%- endcapture -%}
+<div class="row">
+    <div class="col-xs-12">
+        <div class="dts-dash dash-ytd">
+            <div class="dash-panel-heading">
+                <h3 class="dash-panel-title">Wins YTD</h3>
+            </div>
+            <div class="dash-panel-body">
+                <div class="row">
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Salvations</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 38 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                        {% assign salvationYTD = 0 %}
+                                        {% for metricValue in metricvalueItems %}
+                                            {% assign mv = metricValue.YValue | Floor %}
+                                            {% assign salvationYTD = salvationYTD | Plus:mv %}
+                                        {% endfor %}
+                                        {{salvationYTD}}<i class='fas fa-cross'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Baptisms</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 133 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign baptismYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign baptismYTD = baptismYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{baptismYTD}} <i class='fas fa-tint'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Heart and Soul</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 132 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign heartandsoulYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign heartandsoulYTD = heartandsoulYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{heartandsoulYTD}} <i class='fas fa-heart'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>New CG Members</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 131 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign newcgYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign newcgYTD = newcgYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{newcgYTD}} <i class='fas fa-user-plus'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Total CG Members</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 134 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}}
+                                {% endmetricvalue %} <i class='fas fa-group'></i>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Total Connectors</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 136 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fas fa-hands-helping'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>First Time Givers</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 129 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign firsttimegiversYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign firsttimegiversYTD = firsttimegiversYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{firsttimegiversYTD}} <i class='fas fa-donate'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>FTG Adults</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 35 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign ftgadultYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign ftgadultYTD = ftgadultYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{ftgadultYTD}} <i class='fas fa-user-check'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>FTG Kids</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 130 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign ftgkidsYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign ftgkidsYTD = ftgkidsYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{ftgkidsYTD}} <i class='fas fa-child'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>FTG Students</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 37 && MetricValueDateTime > "{{beginningDate}}"' %}
+                                    {% assign ftgstudentsYTD = 0 %}
+                                    {% for metricValue in metricvalueItems %}
+                                        {% assign mv = metricValue.YValue | Floor %}
+                                        {% assign ftgstudentsYTD = ftgstudentsYTD | Plus:mv %}
+                                    {% endfor %}
+                                    {{ftgstudentsYTD}} <i class='fas fa-user-graduate'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% assign weekAgo = 'Now' | DateAdd:-7 | Date:'M/d/yyyy' %}
+<div class="row">
+    <div class="col-xs-12">
+        <div class="dts-dash dash-weekly">
+            <div class="dash-panel-heading">
+                <h3 class="dash-panel-title">Wins This Week</h3>
+            </div>
+            <div class="dash-panel-body">
+                <div class="row">
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Adults 9AM</h5>
+                            </div>
+                            <span class="dash-stat">
+                                   {% metricvalue where:'MetricId == 123 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                        {% assign metricValue = metricvalueItems | First %}
+                                        {{metricValue.YValue | Floor}}<i class='fas fa-user-check'></i>
+                                    {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Adults 11AM</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 121 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fas fa-user-check'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Kids 9AM</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 124 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}}<i class='fa fa-child'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Kids 11AM</h5>
+                            </div>
+                            <span class="dash-stat">
+                                   {% metricvalue where:'MetricId == 122 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                        {% assign metricValue = metricvalueItems | First %}
+                                        {{metricValue.YValue | Floor}}<i class='fa fa-child'></i>
+                                    {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>College</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 142 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fa fa-university'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>High School</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 127 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fas fa-user-graduate'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>Middle School</h5>
+                            </div>
+                            <span class="dash-stat">
+                               {% metricvalue where:'MetricId == 128 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fas fa-user-graduate'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>FTG Adults</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 35 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fas fa-user-check'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>FTG Kids</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 130 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fa fa-child'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dash-card col-xs-12 col-sm-6 col-md-4 col-lg-3 col-xl-2">
+                        <div class="dash-card-body">
+                            <div>
+                                <h5>FTG Students</h5>
+                            </div>
+                            <span class="dash-stat">
+                                {% metricvalue where:'MetricId == 37 && MetricValueDateTime > "{{weekAgo}}"' %}
+                                    {% assign metricValue = metricvalueItems | First %}
+                                    {{metricValue.YValue | Floor}} <i class='fas fa-user-graduate'></i>
+                                {% endmetricvalue %}
+                            </span>
+                        </div>
+                    </div>
+                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
