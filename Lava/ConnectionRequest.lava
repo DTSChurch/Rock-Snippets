@@ -1,0 +1,26 @@
+{% connectionopportunity where:'ConnectionTypeId >= 0' %}
+    {% for co in connectionopportunityItems %}
+      {% assign totalcr = 0 %}
+      {% assign othercr = FALSE %}
+        {% comment %} {{co.Id}}, {{Person.Id}} {%endcomment%}
+      {% capture whereClause %}
+        ConnectionOpportunityId == {{co.Id}} && PersonAliasId == {{Person.PrimaryAlias.Id}}
+      {% endcapture %}
+      {% connectionrequest where:'{{whereClause}}'%}
+      {% assign critems = connectionrequestItems | Size %}
+      {% assign totalcr = totalcr | Plus:critems %}
+      {% if critems > 0 %}
+        {% assign firstcr = connectionrequestItems | First %}
+        {% assign othercr = TRUE %}
+      {% endif %}
+      {% endconnectionrequest %}
+
+     {% if othercr and firstcr.ConnectionState != 'Connected' and firstcr.ConnectionState != 'Inactive' %}
+        <div class="badge" data-toggle="tooltip" data-original-title="{{ firstcr.ConnectionOpportunity.Name }}" style="background:#30a419; Opacity: 3; color:#fff;padding: 3px 6px 5px;margin: 0 5px;">
+            <div class="badge-icon" style="font-size:30px;">
+                <a style="color:#fff" href="https://rock.real.life/page/956?ConnectionRequestId={{ firstcr.Id }}&ConnectionOpportunityId={{co.Id}}"><i class="{{ co.ConnectionType.IconCssClass }} fa-fw"></i></a>
+            </div>
+        </div>
+     {% endif %}
+    {% endfor %}
+{% endconnectionopportunity %}
