@@ -1,3 +1,22 @@
+{%comment%}
+An entity attribute has to be added to a registration instance called ChildRegistrationInstance which is a single select field with the following SQL
+SELECT 
+    ri.Id AS [Value],
+    rt.Name + ' > ' + ri.Name AS [Text]
+FROM RegistrationInstance ri
+JOIN RegistrationTemplate rt ON rt.Id = ri.RegistrationTemplateId
+WHERE ri.IsActive = 1 AND ri.EndDateTime >= GETDATE()
+ORDER BY rt.Id, ri.Id
+
+The template must containe a form field with a key of "Childcare" which is a Boolean field
+
+Then, this shortcode can be added to the registration template in the Registration Confirmation Text
+
+This will allow a instance attribute to show up in the Attributes tab where you can select the childcare registration that you want to 
+redirect to if a user selects that they do need childcare
+{%endcomment%}
+
+
 {% assign childRegistrationInstanceId = RegistrationInstance | Attribute:'ChildRegistrationInstance','RawValue' %}
 {% assign childcareAttributeKey = 'Childcare' %}
 {% for registrant in Registration.Registrants %}
@@ -7,3 +26,5 @@
         {{ childRegistrationURL | PageRedirect }}
     {% endif %}
 {% endfor %}
+
+
