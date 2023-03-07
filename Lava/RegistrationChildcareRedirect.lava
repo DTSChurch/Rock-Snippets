@@ -1,0 +1,9 @@
+{% assign childRegistrationInstanceId = RegistrationInstance | Attribute:'ChildRegistrationInstance','RawValue' %}
+{% assign childcareAttributeKey = 'Childcare' %}
+{% for registrant in Registration.Registrants %}
+    {% assign childRegistration = registrant | Attribute:'Childcare' | AsBoolean %}
+    {% if childRegistration %}
+        {% capture childRegistrationURL %}{{ 'Global' | Attribute:'PublicApplicationRoot' }}registration?registrationinstanceid={{ childRegistrationInstanceId }}{% endcapture %}
+        {{ childRegistrationURL | PageRedirect }}
+    {% endif %}
+{% endfor %}
