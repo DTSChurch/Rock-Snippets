@@ -1,5 +1,5 @@
 -- =============================================
--- Author:      Michael Roth <DTS>
+-- Author:      Steven Floyd <DTS>
 -- Create Date: 01/30/2024
 -- Description: Removes people from rock.
 -- =============================================
