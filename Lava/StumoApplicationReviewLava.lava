@@ -1,0 +1,258 @@
+{% assign gm = Workflow | Attribute:'Applicant','Object' %}
+{% assign gmStatus = gm.GroupMemberStatus %}
+{% assign WorkflowId = gm | Attribute:'ApplicationId' %}
+{% assign WorkflowTypeId =  group | Attribute:'Application','Id' %}
+{% assign LeaderApplication = gm | Attribute:'LeaderApplicationId' %}
+{% if LeaderApplication > 0 %}
+    {% assign WorkflowId = LeaderApplication  %}
+    {% assign WorkflowTypeId = group | Attribute:'LeaderApplicationId' %}
+{% endif %}
+{% assign ignoredAttributes = 'Person,Family,Spouse,Group,Campus Region' | Split:',' %}
+{% assign group = Workflow | Attribute:'Group','Object' %}
+{% assign reviewer = gm | Attribute:'ApprovedBy' %}
+{% assign person = Workflow | Attribute:'Person','Object'  %}
+{% assign individualFundraisingGoal = gm | Attribute:'IndividualFundraisingGoal' | Format:'####.00'%}
+{% assign groupFundraisingGoal =  group | Attribute:'IndividualFundraisingGoal' | Format:'####.00'%}
+{% sql return:'donations' %}
+    SELECT
+    	ftd.EntityId AS ApplicantId,
+    	COALESCE(SUM(ftd.Amount), 0) AS TotalAmountRaised
+    FROM FinancialTransactionDetail ftd
+    WHERE ftd.EntityTypeId = 90
+    	AND ftd.EntityId  IN ({{ gm.Id }})
+    GROUP BY ftd.EntityId
+{% endsql %}
+{% for d in donations %}{% assign ammountRaised = d.TotalAmountRaised %}{%endfor%}
+                                {% if individualFundraisingGoal > 0 %}{% assign requiredFunds = individualFundraisingGoal %}{%else%}{% assign requiredFunds = groupFundraisingGoal %}{% endif %}
+                                {% assign percentComplete = ammountRaised | DividedBy:requiredFunds | Times:100 %}
+{% if WorkflowId %}
+    {% stylesheet %}
+        .form-control[readonly] {
+            background-color: white !important;
+            color: black !important;
+        }
+        .section .section-title {
+            margin: 10px 0;
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .general-info img {
+            margin: 0 20px 20px 0;
+            border-radius: 4px;
+        }
+        .general-info .name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .general-info .communication {
+            list-style: none;
+            margin-top: 8px;
+        }
+        .truncate {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    {% endstylesheet %}
+    {% workflow id:'{{ WorkflowId }}' %}
+            {% assign formActions = workflow.Activities | Select:'Actions' | First | Where:'FormAction',null,'notequal' %}
+            {% assign actionTypeIds = formActions | Select:'ActionTypeId' %}
+            {% assign actionTypeSize = actionTypeIds | Size %}
+            {% assign attributeCount = workflow.AttributeValues | Size | Minus:1 %}
+            {% if actionTypeSize == 1 %}
+                {% workflowactiontype id:'{{ actionTypeIds | First }}' %}
+                    {% assign form = workflowactiontype.WorkflowForm %}
+                {% endworkflowactiontype %}
+            {% endif %}
+<div class="row">
+    <div class="col-md-12 col-sm-12 section general-info">
+        <div class="section-title">General Info |<button class="btn btn-link" data-toggle="modal" data-target="#editProfileModal">Edit</button></div>
+        <div id="profile-information" class="clearfix">
+            <img id="profile-picture" src="{{ gm.Person.PhotoUrl | Default:'/Assets/Images/person-no-photo-unknown.svg' }}" class="pull-left img-thumbnail mr-3 img-responsive" width="150" height="150">
+            <div class="name">{{ gm.Person.FullName }}</div>
+            <div class="address">
+                <div class="address1">{{ gm.Person | Address:'Home','[[Street1]]' }}</div>
+                <div class="city-province-postal"><span class="city">{{ gm.Person | Address:'Home','[[City]]' }}</span>, <span class="province">{{ gm.Person | Address:'Home','[[State]]' }}</span> <span class="postal">{{ gm.Person | Address:'Home','[[PostalCode]]' }}</span></div>
+            </div>
+            <ul class="communication">
+                <li class="truncate"><i class="far fa-envelope"></i> <a title="{{ gm.Person.Email }}" href="mailto:{{ gm.Person.Email }}">{{ gm.Person.Email }}</a></li>
+                <li><i class="fas fa-phone"></i> <text>{{ gm.Person | PhoneNumber:'Mobile' }}</text></li>
+                <li>
+                    <i class="fas fa-birthday-cake"></i>
+                    {{ gm.Person.BirthDate | Date:'M/d/yyyy' }} | {{ gm.Person.Age }} y.o. | {{ gm.Person.Gender }}
+                </li>
+                <li>
+                    <i class="fas fa-building"></i>
+                    Campus: {{ gm | Attribute:'Campus','Name' }}
+                </li>
+{% if reviewer %}
+<li>Approved by: {{ reviewer }}</li>
+{%endif%}
+            </ul>
+        </div>
+    </div>
+<div class="col-md-12 section">
+        <div class="section-title">Fundraising Goal: {{requiredFunds | FormatAsCurrency}}</div>
+
+                                <div class="progress">
+                                  <div class="progress-bar" role="progressbar" style="width: {{percentComplete}}%" aria-valuenow="{{percentComplete}}" aria-valuemin="0" aria-valuemax="100"></div>
+                                  <div class="progress-bar-title">{{ammountRaised | FormatAsCurrency}}</div>
+                                </div>
+
+    </div>
+	<div class="col-md-12 section">
+        <div class="section-title">Requirements</div>
+    </div>
+	<div class="col-md-12 section">
+	{% groupmember where:'PersonId == {{person.Id}} && GroupId == {{group.Id}}' securityenabled:'false'%}
+		{% assign gMemberId = groupmember.Id %}
+	{% endgroupmember %}
+	{% groupmemberrequirement where:'GroupMemberId == {{gMemberId}}' %}
+		{% for gmr in groupmemberrequirementItems %}
+			{% assign taskCompleteDate = gmr.RequirementMetDateTime %}
+			{% assign taskCompleteFlag = taskCompleteDate | ToString | Size %}
+			{% assign toolTip = '' %}
+			{%if taskCompleteFlag > 0 %}
+			{% capture toolTip %} Completed {{gmr.GroupRequirement.GroupRequirementType.Name}} on {{taskCompleteDate | Date:'M/d/yyyy'}}{% endcapture %}
+				<i class="fas fa-check-square fa-2x" style="color: #6db2a5;" title="{{toolTip}}"></i>
+			{%else%}
+			{% capture toolTip %}{{gmr.GroupRequirement.GroupRequirementType.Name}} is not complete.{% endcapture %}
+				<i class="fas fa-times-circle fa-2x" style="color: #D4442E;" title="{{toolTip}}"></i>
+			{% endif %}
+		{% endfor %}
+	{% endgroupmemberrequirement %}
+	</div>
+    <div class="col-md-12 section">
+        <div class="section-title">Application Questions<small><button class="btn btn-link hidden" data-toggle="modal" data-target="#editApplicationModal">Edit Application</button></small></div>
+    </div>
+    <div class="col-md-12 section application-questions">
+        <form>
+            {%- for i in (0..attributeCount) -%}
+                {% if workflow.WorkflowType.IsFormBuilder %}
+                    {% assign isIgnoredAttribute = ignoredAttributes | Contains:workflow.AttributeValues[i].AttributeName %}
+                    {% unless isIgnoredAttribute %}
+                        {% assign wafa = empty %}
+                        {% capture WhereClause %}WorkflowActionFormId == {{ form.Id }} && AttributeId == {{ workflow.AttributeValues[i].AttributeId }} && IsVisible == true{% endcapture %}
+                        {% workflowactionformattribute where:'{{ WhereClause }}' limit:'1' %}
+                            {% assign wafa = workflowactionformattributeItems | First %}
+                        {% endworkflowactionformattribute %}
+                        {% if wafa and wafa != empty %}
+                            {% if wafa.PreHtml %}
+                                {{ wafa.PreHtml | RunLava }}
+                            {% else %}
+                                <div class="form-group">
+                            {% endif %}
+                            {% unless wafa.HideLabel %}
+                                <label for="{{ workflow.AttributeValues[i].AttributeName }}">{{ workflow.AttributeValues[i].AttributeName }}</label>
+                            {% endunless %}
+                            <p id="{{ workflow.AttributeValues[i].AttributeName }}">{% if workflow.AttributeValues[i].ValueFormatted %}{{ workflow.AttributeValues[i].ValueFormatted }}{% endif %}</p>
+                            {% if wafa.PostHtml %}
+                                {{ wafa.PostHtml | RunLava }}
+                            {% else %}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                        <div class="form-group">
+                            <label for="{{ workflow.AttributeValues[i].AttributeName }}">{{ workflow.AttributeValues[i].AttributeName }}</label>
+                            <p id="{{ workflow.AttributeValues[i].AttributeName }}">{% if Workflow.AttributeValues[i].ValueFormatted %}{{ workflow.AttributeValues[i].ValueFormatted }}{% endif %}</p>
+                        </div>
+                        {% endif %}
+                    {% endunless %}
+                {% endif %}
+            {%- endfor -%}
+        </form>
+    </div>
+</div>
+    {% endworkflow %}
+
+    {% javascript %}
+$(document).ready(function() {
+    $('#editProfileFrame').on('load', function() {
+        var iframeContents = $('#editProfileFrame').contents();
+        var iframeButton = iframeContents.find('.actions .btn:contains("Update")');
+
+        iframeButton.on('click', function() {
+            var iframeObserver = new MutationObserver(function(mutations) {
+                // Check if the success message is visible
+                var successMessage = iframeContents.find('div[id$=_nbMessage].alert-success');
+                if (successMessage.length > 0) {
+                    // The success message is visible, so hide the modal and reload the page
+                    $('#editProfileModal').modal('hide');
+                    location.reload();
+                }
+            });
+
+            // Start observing the iframe content for changes
+            iframeObserver.observe($('#editProfileFrame')[0].contentDocument.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true
+            });
+        });
+    });
+
+    $('#editApplicationFrame').on('load', function() {
+        var iframeContents = $('#editApplicationFrame').contents();
+        var iframeButton = iframeContents.find('.actions .btn:contains("Submit")');
+
+        iframeButton.on('click', function() {
+            var iframeObserver = new MutationObserver(function(mutations) {
+                // Check if the success message is visible
+                var successMessage = iframeContents.find('div[id$=_nbMessage].alert-success');
+                if (successMessage.length > 0) {
+                    // The success message is visible, so hide the modal and reload the page
+                    $('#editApplicationModal').modal('hide');
+                    location.reload();
+                }
+            });
+
+            // Start observing the iframe content for changes
+            iframeObserver.observe($('#editApplicationFrame')[0].contentDocument.body, {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                characterData: true
+            });
+        });
+    });
+});
+    {% endjavascript %}
+<!-- hide Accept Button if active -->
+{% if gmStatus == 'DoNotRUn' %}
+<script>
+$(document).ready(function() {
+    // Select the link by its ID and then use the hide() method
+    $('.actions > .btn-success').hide();
+$('.actions > .btn-danger').text("Withdrawal");
+});
+</script>
+{%endif%}
+<!-- Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" role="dialog" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document" style="width: 500px; height: 1000px;">
+        <div class="modal-content" style="height: 100%; width: 100%;">
+            <div class="modal-header" style="height: 10%;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title text-center" id="editProfileModalLabel" style="height: 100%; width: 100%;">Edit Profile</h4>
+            </div>
+            <div class="modal-body" style="height: 90%;">
+                <iframe id="editProfileFrame" src="{{ 'Global' | Page:'Scheme' }}://{{ 'Global' | Page:'Host' }}/page/1606?Person={{ gm.Person.Guid }}" style="border: none; width: 100%; height: 100%;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="editApplicationModal" tabindex="-1" role="dialog" aria-labelledby="editApplicationModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document" style="width: 500px; height: 1000px;">
+        <div class="modal-content" style="height: 100%; width: 100%;">
+            <div class="modal-header" style="height: 10%;">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h4 class="modal-title text-center" id="editApplicationModalLabel" style="height: 100%; width: 100%;">Edit Application</h4>
+            </div>
+            <div class="modal-body" style="height: 90%;">
+                <iframe id="editApplicationFrame" src="{{ 'Global' | Page:'Scheme' }}://{{ 'Global' | Page:'Host' }}/page/1608?WorkflowId={{  WorkflowId }}&WorkflowTypeId={{ WorkflowTypeId }}" style="border: none; width: 100%; height: 100%;"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
