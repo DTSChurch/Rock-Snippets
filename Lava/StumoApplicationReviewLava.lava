@@ -53,17 +53,30 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        label {
+            margin-bottom: 0px;
+        }
+        .form-group {
+            margin-bottom: 5px;
+        }
+        .response {
+        margin-left:0px;
+        }
     {% endstylesheet %}
-    {% workflow id:'{{ WorkflowId }}' %}
-            {% assign formActions = workflow.Activities | Select:'Actions' | First | Where:'FormAction',null,'notequal' %}
-            {% assign actionTypeIds = formActions | Select:'ActionTypeId' %}
-            {% assign actionTypeSize = actionTypeIds | Size %}
-            {% assign attributeCount = workflow.AttributeValues | Size | Minus:1 %}
-            {% if actionTypeSize == 1 %}
-                {% workflowactiontype id:'{{ actionTypeIds | First }}' %}
-                    {% assign form = workflowactiontype.WorkflowForm %}
-                {% endworkflowactiontype %}
-            {% endif %}
+    {%sql return:'attributeList'%}
+        SELECT a.Id, a.Name
+                ,av.Id ValueId
+        FROM Workflow wf
+            INNER JOIN WorkflowActivityType wactivity ON wf.WorkflowTypeId = wactivity.WorkflowTypeId
+            INNER JOIN WorkflowActionType waction ON waction.ActivityTypeId = wactivity.Id AND waction.EntityTypeId = 823
+            INNER JOIN WorkflowActionForm waf ON waf.Id = waction.WorkflowFormId
+            INNER JOIN WorkflowActionFormAttribute wafa ON wafa.WorkflowActionFormId = waf.Id
+            INNER JOIN Attribute a ON a.Id = wafa.AttributeId
+            LEFT JOIN AttributeValue av ON av.AttributeId = a.Id AND av.EntityId = wf.Id
+        WHERE wf.Id = {{WorkflowId}}
+    {%endsql%}
+            {% assign attributeCount = attributeList | Size %}
+
 <div class="row">
     <div class="col-md-12 col-sm-12 section general-info">
         <div class="section-title">General Info |<button class="btn btn-link" data-toggle="modal" data-target="#editProfileModal">Edit</button></div>
@@ -85,19 +98,18 @@
                     <i class="fas fa-building"></i>
                     Campus: {{ gm | Attribute:'Campus','Name' }}
                 </li>
-{% if reviewer %}
-<li>Approved by: {{ reviewer }}</li>
-{%endif%}
+        {% if reviewer %}
+        <li>Approved by: {{ reviewer }}</li>
+        {%endif%}
             </ul>
         </div>
     </div>
-<div class="col-md-12 section">
+    <div class="col-md-12 section">
         <div class="section-title">Fundraising Goal: {{requiredFunds | FormatAsCurrency}}</div>
-
-                                <div class="progress">
-                                  <div class="progress-bar" role="progressbar" style="width: {{percentComplete}}%" aria-valuenow="{{percentComplete}}" aria-valuemin="0" aria-valuemax="100"></div>
-                                  <div class="progress-bar-title">{{ammountRaised | FormatAsCurrency}}</div>
-                                </div>
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: {{percentComplete}}%" aria-valuenow="{{percentComplete}}" aria-valuemin="0" aria-valuemax="100"></div>
+            <div class="progress-bar-title">{{ammountRaised | FormatAsCurrency}}</div>
+        </div>
 
     </div>
 	<div class="col-md-12 section">
@@ -127,43 +139,19 @@
     </div>
     <div class="col-md-12 section application-questions">
         <form>
-            {%- for i in (0..attributeCount) -%}
-                {% if workflow.WorkflowType.IsFormBuilder %}
-                    {% assign isIgnoredAttribute = ignoredAttributes | Contains:workflow.AttributeValues[i].AttributeName %}
-                    {% unless isIgnoredAttribute %}
-                        {% assign wafa = empty %}
-                        {% capture WhereClause %}WorkflowActionFormId == {{ form.Id }} && AttributeId == {{ workflow.AttributeValues[i].AttributeId }} && IsVisible == true{% endcapture %}
-                        {% workflowactionformattribute where:'{{ WhereClause }}' limit:'1' %}
-                            {% assign wafa = workflowactionformattributeItems | First %}
-                        {% endworkflowactionformattribute %}
-                        {% if wafa and wafa != empty %}
-                            {% if wafa.PreHtml %}
-                                {{ wafa.PreHtml | RunLava }}
-                            {% else %}
-                                <div class="form-group">
-                            {% endif %}
-                            {% unless wafa.HideLabel %}
-                                <label for="{{ workflow.AttributeValues[i].AttributeName }}">{{ workflow.AttributeValues[i].AttributeName }}</label>
-                            {% endunless %}
-                            <p id="{{ workflow.AttributeValues[i].AttributeName }}">{% if workflow.AttributeValues[i].ValueFormatted %}{{ workflow.AttributeValues[i].ValueFormatted }}{% endif %}</p>
-                            {% if wafa.PostHtml %}
-                                {{ wafa.PostHtml | RunLava }}
-                            {% else %}
-                                </div>
-                            {% endif %}
-                        {% else %}
-                        <div class="form-group">
-                            <label for="{{ workflow.AttributeValues[i].AttributeName }}">{{ workflow.AttributeValues[i].AttributeName }}</label>
-                            <p id="{{ workflow.AttributeValues[i].AttributeName }}">{% if Workflow.AttributeValues[i].ValueFormatted %}{{ workflow.AttributeValues[i].ValueFormatted }}{% endif %}</p>
-                        </div>
+            {%- for a in attributeList -%}
+                <div class="form-group">
+                    <label for="{{ a.Name }}">{{ a.Name }}</label>
+                        {%if a.ValueId%}
+                            {% attributevalue where:'Id == {{a.ValueId}}'%}
+                                <span class="col-xs-12 response">{{attributevalue.ValueFormatted}}</span>
+                            {%endattributevalue%}
                         {% endif %}
-                    {% endunless %}
-                {% endif %}
+                </div>
             {%- endfor -%}
         </form>
     </div>
 </div>
-    {% endworkflow %}
 
     {% javascript %}
 $(document).ready(function() {
