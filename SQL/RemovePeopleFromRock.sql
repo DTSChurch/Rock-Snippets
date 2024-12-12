@@ -92,6 +92,26 @@ WHERE [PersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
+DELETE
+FROM [ConnectionRequestActivity]
+WHERE [ConnectionRequestId] IN (
+    SELECT [Id]
+    FROM [ConnectionRequest]
+    WHERE [PersonAliasId] IN (
+        SELECT [Id]
+        FROM [PersonAlias]
+        WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+    )
+);
+
+DELETE
+FROM [ConnectionRequest]
+WHERE [PersonAliasId] IN (
+    SELECT [Id]
+    FROM [PersonAlias]
+    WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+);
+
 -- Person Alias 188K
 DELETE
 FROM [PersonAlias]
