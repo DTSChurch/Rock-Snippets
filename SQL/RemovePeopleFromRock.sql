@@ -84,6 +84,13 @@ Set p.ModifiedByPersonAliasId = NULL
 FROM Person p WHERE p.Id IN (
 	SELECT [Id] FROM #PersonIds);
 
+DELETE 
+FROM [CommunicationRecipient]
+WHERE [PersonAliasId] IN (
+    SELECT [Id]
+    FROM [PersonAlias]
+    WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+);
 
 -- Person Alias 188K
 DELETE
