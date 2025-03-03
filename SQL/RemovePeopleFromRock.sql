@@ -8,9 +8,8 @@ CREATE TABLE #PersonIds (
     Id INT
 );
 
-insert into #PersonIds (Id) select Id FROM [Person] WHERE [FirstName] LIKE '%BITCOIN%';
+insert into #PersonIds (Id) select Id FROM [Person] WHERE [Email] = 'sample@email.tst';
 
---Attribute Value 188K
 DELETE
 FROM [AttributeValue]
 WHERE [CreatedByPersonAliasId] IN (
@@ -19,7 +18,6 @@ WHERE [CreatedByPersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---Assessments 0
 DELETE
 FROM [Assessment]
 WHERE [CreatedByPersonAliasId] IN (
@@ -28,7 +26,6 @@ WHERE [CreatedByPersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---Interactions 0
 DELETE
 FROM [Interaction]
 WHERE [PersonAliasId] IN (
@@ -37,7 +34,6 @@ WHERE [PersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---Person Viewed 0
 DELETE
 FROM [PersonViewed]
 WHERE [TargetPersonAliasId] IN (
@@ -46,7 +42,6 @@ WHERE [TargetPersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---Person Search Key 0
 DELETE
 FROM [PersonSearchKey]
 WHERE [PersonAliasId] IN (
@@ -55,7 +50,6 @@ WHERE [PersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---Person Duplicate (Main Person) 0
 DELETE
 FROM [PersonDuplicate]
 WHERE [PersonAliasId] IN (
@@ -64,7 +58,6 @@ WHERE [PersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---Person Duplicate (Other Person) 1
 DELETE
 FROM [PersonDuplicate]
 WHERE [DuplicatePersonAliasId] IN (
@@ -73,27 +66,57 @@ WHERE [DuplicatePersonAliasId] IN (
     WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
 );
 
---History 70
 DELETE
 FROM [History]
 WHERE [EntityId] IN (SELECT [Id] FROM #PersonIds);
 
--- Empty Person.ModifiedByPersonAliasId of people who are needing deleted. 188K
 UPDATE p
 Set p.ModifiedByPersonAliasId = NULL
 FROM Person p WHERE p.Id IN (
 	SELECT [Id] FROM #PersonIds);
 
+DELETE 
+FROM [CommunicationRecipient]
+WHERE [PersonAliasId] IN (
+    SELECT [Id]
+    FROM [PersonAlias]
+    WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+);
 
--- Person Alias 188K
+DELETE
+FROM [ConnectionRequestActivity]
+WHERE [ConnectionRequestId] IN (
+    SELECT [Id]
+    FROM [ConnectionRequest]
+    WHERE [PersonAliasId] IN (
+        SELECT [Id]
+        FROM [PersonAlias]
+        WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+    )
+);
+
+DELETE
+FROM [ConnectionRequest]
+WHERE [PersonAliasId] IN (
+    SELECT [Id]
+    FROM [PersonAlias]
+    WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+);
+
+DELETE
+FROM [PersonAliasPersonalization]
+WHERE [PersonAliasId] IN (
+    SELECT [Id]
+    FROM [PersonAlias]
+    WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds)
+);
+
 DELETE
 FROM [PersonAlias]
 WHERE [PersonId] IN (SELECT [Id] FROM #PersonIds);
 
---Last but not least.... The Person 188065
 DELETE
 FROM [Person]
 WHERE [Id] IN (SELECT [Id] FROM #PersonIds);
 
 DROP TABLE IF EXISTS  #PersonIds
-GO

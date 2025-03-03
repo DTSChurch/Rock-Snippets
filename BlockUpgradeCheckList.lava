@@ -1,0 +1,70 @@
+{% sql return:'TreeData' %}
+{% raw %}
+SELECT
+    s.[Id] as [SiteId],
+    s.[Name] as [SiteName],
+    p.[Id] as [PageId],
+    p.[LayoutId] as [LayoutId],
+    l.[Name] as [LayoutName],
+    p.[PageTitle] as [PageTitle],
+    bt.[Name] as [BlockType],
+    b.[Zone],
+    CASE 
+        WHEN (LTRIM(RTRIM(b.[PreHtml])) LIKE '%javascript%' OR LTRIM(RTRIM(b.[PreHtml])) LIKE '%<script%') 
+          OR (LTRIM(RTRIM(b.[PostHtml])) LIKE '%javascript%' OR LTRIM(RTRIM(b.[PostHtml])) LIKE '%<script%') 
+        THEN 1 
+        ELSE 0 
+    END AS [ContainsJavaScript]
+FROM
+    [Block] b
+join [BlockType] bt ON bt.[Id] = b.[BlockTypeId]
+join [Page] p ON p.[Id] = b.[PageId]
+left join [Layout] l ON l.[Id] = p.[LayoutId]
+left join [Site] s ON s.[Id] = l.[SiteId]
+where 
+    (LTRIM(RTRIM(b.[PreHtml])) IS NOT NULL AND LTRIM(RTRIM(b.[PreHtml])) <> '') 
+    OR (LTRIM(RTRIM(b.[PostHtml])) IS NOT NULL AND LTRIM(RTRIM(b.[PostHtml])) <> '');
+{% endraw %}
+{% endsql %}
+
+{% assign groupedTreeDataBySiteId = TreeData | GroupBy:'SiteId' %}
+
+<ul>
+  {% for siteGroup in groupedTreeDataBySiteId %}
+    {% assign siteParts = siteGroup | PropertyToKeyValue %}
+    {% assign siteName = siteParts.Value | Select:'SiteName' | First %}
+    <li>
+      <strong>{{ siteName }}</strong> (ID: {{ siteParts.Key }})
+      <ul>
+        {% assign groupedTreeDataByLayoutId = siteParts.Value | GroupBy:'LayoutId' %}
+        {% for layoutGroup in groupedTreeDataByLayoutId %}
+            {% assign layoutParts = layoutGroup | PropertyToKeyValue %}
+            {% assign layoutName = layoutParts.Value | Select:'LayoutName' | First %}
+          <li>
+            <strong>{{ layoutName }}</strong> (ID: {{ layoutParts.Key }})
+            <ul>
+                {% assign groupedTreeDataByPageId = layoutParts.Value | GroupBy:'PageId' %}
+              {% for pageGroup in groupedTreeDataByPageId %}
+                {% assign pageParts = pageGroup | PropertyToKeyValue %}
+                {% assign pageTitle = pageParts.Value | Select:'PageTitle' | First %}
+                <li>
+                  <strong><a href="/Page/{{ pageParts.Key }}">{{ pageTitle }}</a></strong> (ID: {{ pageParts.Key }})
+                  <ul>
+                    {% for blockInstance in pageParts.Value %}
+                      <li>
+                        {{ blockInstance.BlockType }} (Zone: {{ blockInstance.Zone }})
+                        {% if blockInstance.ContainsJavaScript == 1 %}
+                          🚨 <span style="color: red;">Contains JavaScript</span>
+                        {% endif %}
+                      </li>
+                    {% endfor %}
+                  </ul>
+                </li>
+              {% endfor %}
+            </ul>
+          </li>
+        {% endfor %}
+      </ul>
+    </li>
+  {% endfor %}
+</ul>
